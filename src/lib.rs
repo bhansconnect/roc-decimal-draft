@@ -612,8 +612,21 @@ mod tests {
 
 #[inline(always)]
 fn decimalize(num: u128) -> (u64, u64) {
-    let hi = (num / RocDec::DECIMAL_MAX as u128) as u64;
-    let lo = (num % RocDec::DECIMAL_MAX as u128) as u64;
+    // let hi = (num / RocDec::DECIMAL_MAX as u128) as u64;
+    // let lo = (num % RocDec::DECIMAL_MAX as u128) as u64;
+    use ethnum::U256;
+    let lhs = U256::from_words(0, num);
 
+    // Instead multiply by the ceiling of 2^190/10^19 then divide by 2^190 (aka right shift)
+    // 2^190/10^19 is 156927543384667019095894735580191660403
+    let rhs = U256::from_words(0x0, 156927543384667019095894735580191660403);
+
+    // I think this could theoretically be made faster due to discarded digits.
+    // Would need to inline or manually write out the function.
+    let res: U256 = lhs * rhs >> 190;
+
+    // let hi = (*res.low() >> 64) as u64;
+    let hi = res.as_u64();
+    let lo = (num - (hi as u128 * RocDec::DECIMAL_MAX as u128)) as u64;
     (hi, lo)
 }
